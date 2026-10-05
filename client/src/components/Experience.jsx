@@ -1,14 +1,12 @@
 /**
  * components/Experience.jsx
- * Experience section with vertical timeline layout, loading skeleton, error state with retry,
- * and Framer Motion animations.
+ * Experience section with vertical timeline layout and Framer Motion animations.
+ * Uses static local data — no backend required.
  */
 
-import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { FiBriefcase, FiMapPin, FiCalendar, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
-import { fetchExperience } from '../utils/api';
+import { FiBriefcase, FiMapPin, FiCalendar } from 'react-icons/fi';
 import { experience as localExperience } from '../data/experience';
 
 const ExperienceCard = ({ item, index }) => {
@@ -80,36 +78,8 @@ const ExperienceCard = ({ item, index }) => {
 };
 
 const Experience = () => {
-  const [experienceList, setExperienceList] = useState([]);
-  const [loading, setLoading]               = useState(true);
-  const [error, setError]                     = useState(null);
-  const [usingFallback, setUsingFallback]     = useState(false);
-  const [ref, inView]                        = useInView({ threshold: 0.05, triggerOnce: true });
-
-  const loadExperienceData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchExperience();
-      if (res && res.data && res.data.length > 0) {
-        setExperienceList(res.data);
-        setUsingFallback(false);
-      } else {
-        throw new Error('Empty data returned from API');
-      }
-    } catch (err) {
-      console.warn('API error fetching experience, falling back to static data:', err);
-      setExperienceList(localExperience);
-      setUsingFallback(true);
-      setError('Could not reach backend API. Showing offline cached experience entries.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadExperienceData();
-  }, [loadExperienceData]);
+  const experienceList = localExperience;
+  const [ref, inView] = useInView({ threshold: 0.05, triggerOnce: true });
 
   return (
     <section
@@ -136,51 +106,17 @@ const Experience = () => {
           </p>
         </motion.div>
 
-        {/* Error banner with retry option if using fallback */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-xl mx-auto mb-10 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 text-amber-800 dark:text-amber-300 flex items-center justify-between gap-4 text-sm"
-          >
-            <div className="flex items-center gap-2">
-              <FiAlertCircle size={18} className="shrink-0 text-amber-500" />
-              <span>{error}</span>
-            </div>
-            <button
-              onClick={loadExperienceData}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-800/40 hover:bg-amber-200 dark:hover:bg-amber-700/50 font-medium text-xs transition-colors shrink-0"
-              aria-label="Retry fetching experience data from backend"
-            >
-              <FiRefreshCw size={12} />
-              Retry API
-            </button>
-          </motion.div>
-        )}
+        {/* Experience Timeline */}
+        <div className="relative max-w-4xl mx-auto">
+          {/* Vertical Central Line (Desktop) / Left Line (Mobile) */}
+          <div className="absolute left-4 md:left-1/2 top-4 bottom-4 w-0.5 -translate-x-1/2 bg-gradient-to-b from-primary-500 via-violet-500 to-cyan-500 opacity-30 dark:opacity-40" />
 
-        {/* Loading Skeletons */}
-        {loading ? (
-          <div className="max-w-4xl mx-auto space-y-8">
-            {[1, 2].map(i => (
-              <div key={i} className="glass-card p-6 h-48 animate-pulse flex flex-col justify-between">
-                <div className="h-6 bg-slate-200 dark:bg-dark-600 rounded w-1/3 mb-4" />
-                <div className="h-4 bg-slate-200 dark:bg-dark-600 rounded w-2/3 mb-2" />
-                <div className="h-4 bg-slate-200 dark:bg-dark-600 rounded w-1/2" />
-              </div>
+          <div className="space-y-12">
+            {experienceList.map((item, index) => (
+              <ExperienceCard key={item.id} item={item} index={index} />
             ))}
           </div>
-        ) : (
-          <div className="relative max-w-4xl mx-auto">
-            {/* Vertical Central Line (Desktop) / Left Line (Mobile) */}
-            <div className="absolute left-4 md:left-1/2 top-4 bottom-4 w-0.5 -translate-x-1/2 bg-gradient-to-b from-primary-500 via-violet-500 to-cyan-500 opacity-30 dark:opacity-40" />
-
-            <div className="space-y-12">
-              {experienceList.map((item, index) => (
-                <ExperienceCard key={item.id} item={item} index={index} />
-              ))}
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </section>
   );

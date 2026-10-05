@@ -1,14 +1,13 @@
 /**
  * components/Projects.jsx
- * Projects section: fetches from API with fallback to local static data.
- * Shows responsive card grid, tech-stack tags, bullet highlights, and GitHub/Live buttons with loading skeletons & retry capability.
+ * Projects section: responsive card grid, tech-stack tags, bullet highlights,
+ * and GitHub/Live buttons. Uses static local data — no backend required.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { FiGithub, FiExternalLink, FiFolder, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
-import { fetchProjects } from '../utils/api';
+import { FiGithub, FiExternalLink, FiFolder } from 'react-icons/fi';
 import { projects as localProjects } from '../data/projects';
 
 const CATEGORIES = ['All', 'Full Stack', 'Backend', 'Frontend'];
@@ -113,38 +112,12 @@ const ProjectCard = ({ project, index }) => {
 };
 
 const Projects = () => {
-  const [projectsList, setProjectsList]   = useState([]);
-  const [activeCategory, setCategory]   = useState('All');
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState(null);
-  const [ref, inView]                   = useInView({ threshold: 0.05, triggerOnce: true });
-
-  const loadProjectsData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchProjects();
-      if (res && res.data && res.data.length > 0) {
-        setProjectsList(res.data);
-      } else {
-        throw new Error('Empty data returned from API');
-      }
-    } catch (err) {
-      console.warn('API error fetching projects, falling back to static data:', err);
-      setProjectsList(localProjects);
-      setError('Could not reach backend API. Showing offline cached projects.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProjectsData();
-  }, [loadProjectsData]);
+  const [activeCategory, setCategory] = useState('All');
+  const [ref, inView]                 = useInView({ threshold: 0.05, triggerOnce: true });
 
   const filtered = activeCategory === 'All'
-    ? projectsList
-    : projectsList.filter(p => p.category && p.category.toLowerCase() === activeCategory.toLowerCase());
+    ? localProjects
+    : localProjects.filter(p => p.category && p.category.toLowerCase() === activeCategory.toLowerCase());
 
   return (
     <section
@@ -168,28 +141,6 @@ const Projects = () => {
             Production-ready applications and scalable server architectures.
           </p>
         </motion.div>
-
-        {/* Error Banner with Retry */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-xl mx-auto mb-10 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 text-amber-800 dark:text-amber-300 flex items-center justify-between gap-4 text-sm"
-          >
-            <div className="flex items-center gap-2">
-              <FiAlertCircle size={18} className="shrink-0 text-amber-500" />
-              <span>{error}</span>
-            </div>
-            <button
-              onClick={loadProjectsData}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-800/40 hover:bg-amber-200 dark:hover:bg-amber-700/50 font-medium text-xs transition-colors shrink-0"
-              aria-label="Retry fetching projects data from backend"
-            >
-              <FiRefreshCw size={12} />
-              Retry API
-            </button>
-          </motion.div>
-        )}
 
         {/* Category Filter */}
         <motion.div
@@ -218,39 +169,27 @@ const Projects = () => {
         </motion.div>
 
         {/* Card Grid */}
-        {loading ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {[1, 2].map(i => (
-              <div key={i} className="glass-card h-72 animate-pulse p-6 flex flex-col justify-between">
-                <div className="h-6 bg-slate-200 dark:bg-dark-600 rounded w-1/2" />
-                <div className="h-16 bg-slate-200 dark:bg-dark-600 rounded w-full" />
-                <div className="h-8 bg-slate-200 dark:bg-dark-600 rounded w-3/4" />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeCategory}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="grid sm:grid-cols-2 lg:grid-cols-2 gap-8 max-w-5xl mx-auto"
+          >
+            {filtered.length > 0 ? (
+              filtered.map((project, i) => (
+                <ProjectCard key={project.id} project={project} index={i} />
+              ))
+            ) : (
+              <div className="col-span-full flex flex-col items-center gap-4 py-16 text-slate-400 dark:text-slate-600">
+                <FiFolder size={40} />
+                <p className="text-lg">No projects found in this category.</p>
               </div>
-            ))}
-          </div>
-        ) : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeCategory}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="grid sm:grid-cols-2 lg:grid-cols-2 gap-8 max-w-5xl mx-auto"
-            >
-              {filtered.length > 0 ? (
-                filtered.map((project, i) => (
-                  <ProjectCard key={project.id} project={project} index={i} />
-                ))
-              ) : (
-                <div className="col-span-full flex flex-col items-center gap-4 py-16 text-slate-400 dark:text-slate-600">
-                  <FiFolder size={40} />
-                  <p className="text-lg">No projects found in this category.</p>
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        )}
+            )}
+          </motion.div>
+        </AnimatePresence>
 
         {/* GitHub Link */}
         <motion.div
